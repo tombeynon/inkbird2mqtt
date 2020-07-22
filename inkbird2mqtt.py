@@ -2,6 +2,7 @@
 
 import datetime
 import logging
+import json
 from bluepy import btle
 import paho.mqtt.client as mqtt
 
@@ -22,10 +23,10 @@ from inkbird2mqtt_config import (
 
 
 def float_value(nums):
+    num = nums[1] * 256 + nums[0]
     # check if temp is negative
-    num = (nums[1]<<8)|nums[0]
-    if nums[1] == 0xff:
-        num = -( (num ^ 0xffff ) + 1)
+    if num >= 0x8000:
+        num = num - 0x10000
     return float(num) / 100
 
 def get_readings():
@@ -63,17 +64,14 @@ def run():
     logging.info("  Sensor: " + str(sensor))
     # logging.info("  Battery: " + str(battery))
 
-    msg_data = (
-        '{"time":"'
-        + time
-        + '","temperature":'
-        + str(temperature_c)
-        + ',"humidity":'
-        + str(humidity)
-        + ',"sensor":"'
-        + str(sensor)
-        + '"}'
-    )
+    data = {}
+    data['time'] = time
+    data['temperature'] = temperature_c
+    data['humidity'] = humidity
+    data['sensor'] = sensor
+
+    msg_data = json.dumps(data)
+
     print(
         "\n  Publishing MQTT payload to "
         + mqtt_topic
